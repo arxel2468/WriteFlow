@@ -1,31 +1,21 @@
-import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
-import { redirect, notFound } from "next/navigation";
-import { WorkspaceNav } from "@/components/workspace/workspace-nav";
+import type { Metadata } from "next";
+import "@fontsource-variable/inter";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
-export default async function ProjectLayout({
+export const metadata: Metadata = {
+  title: "WriteFlow",
+  description: "Transform scattered thoughts into structured, polished writing.",
+};
+
+export default function RootLayout({
   children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const project = await prisma.project.findFirst({
-    where: { id, userId: user.id },
-  });
-
-  if (!project) notFound();
-
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <WorkspaceNav projectId={id} projectTitle={project.title} />
-      <main className="flex-1">{children}</main>
-    </div>
+    <html lang="en" suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
+    </html>
   );
 }

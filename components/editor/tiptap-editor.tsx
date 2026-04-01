@@ -7,14 +7,25 @@ import Underline from "@tiptap/extension-underline";
 import CharacterCount from "@tiptap/extension-character-count";
 import { EditorToolbar } from "./editor-toolbar";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { useThemeStore } from "@/stores/theme-store";
+import type { Editor } from "@tiptap/react";
 
 type TiptapEditorProps = {
   initialContent?: Record<string, unknown>;
   onSave: (content: Record<string, unknown>, wordCount: number) => void;
+  onEditorReady?: (editor: Editor) => void;
 };
 
-export function TiptapEditor({ initialContent, onSave }: TiptapEditorProps) {
+const widthMap = {
+  narrow: "max-w-xl",
+  medium: "max-w-3xl",
+  wide: "max-w-5xl",
+};
+
+export function TiptapEditor({ initialContent, onSave, onEditorReady }: TiptapEditorProps) {
+  const settings = useThemeStore((s) => s.writerSettings);
+
   const debouncedSave = useDebounce(
     useCallback(
       (json: Record<string, unknown>, words: number) => {
@@ -26,6 +37,7 @@ export function TiptapEditor({ initialContent, onSave }: TiptapEditorProps) {
   );
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -39,8 +51,8 @@ export function TiptapEditor({ initialContent, onSave }: TiptapEditorProps) {
     content: initialContent || "",
     editorProps: {
       attributes: {
-        class:
-          "prose prose-neutral max-w-none min-h-[400px] rounded-xl bg-card p-6 shadow-sm focus:outline-none",
+        class: "min-h-[400px] rounded-xl bg-card p-6 shadow-sm focus:outline-none",
+        style: `font-size: ${settings.fontSize}px; line-height: ${settings.lineHeight}`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -49,6 +61,12 @@ export function TiptapEditor({ initialContent, onSave }: TiptapEditorProps) {
       debouncedSave(json, words);
     },
   });
+
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   if (!editor) {
     return <div className="h-96 animate-pulse rounded-xl bg-muted" />;
@@ -59,7 +77,7 @@ export function TiptapEditor({ initialContent, onSave }: TiptapEditorProps) {
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
   return (
-    <div>
+    <div className={`mx-auto ${widthMap[settings.editorWidth]}`}>
       <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
       <div className="mt-2 flex items-center justify-between px-1 text-xs text-muted-foreground">

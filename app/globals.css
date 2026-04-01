@@ -30,28 +30,53 @@
   }
 
   .dark {
-    --background: #000000;
-    --foreground: #F5F5F7;
-    --card: #1C1C1E;
-    --card-foreground: #F5F5F7;
-    --popover: #1C1C1E;
-    --popover-foreground: #F5F5F7;
-    --primary: #F5F5F7;
-    --primary-foreground: #000000;
-    --secondary: #2C2C2E;
-    --secondary-foreground: #F5F5F7;
-    --muted: #1C1C1E;
-    --muted-foreground: #8E8E93;
-    --accent: #0A84FF;
+    --background: #1A1A1D;
+    --foreground: #E4E4E7;
+    --card: #232326;
+    --card-foreground: #E4E4E7;
+    --popover: #232326;
+    --popover-foreground: #E4E4E7;
+    --primary: #E4E4E7;
+    --primary-foreground: #1A1A1D;
+    --secondary: #2C2C30;
+    --secondary-foreground: #E4E4E7;
+    --muted: #2C2C30;
+    --muted-foreground: #9C9CA4;
+    --accent: #4D9EFF;
     --accent-foreground: #FFFFFF;
-    --destructive: #FF453A;
+    --destructive: #FF6369;
     --destructive-foreground: #FFFFFF;
-    --border: #38383A;
-    --input: #38383A;
-    --ring: #0A84FF;
-    --surface: #1C1C1E;
-    --success: #30D158;
-    --warning: #FFD60A;
+    --border: #3A3A3F;
+    --input: #3A3A3F;
+    --ring: #4D9EFF;
+    --surface: #27272B;
+    --success: #4ADE80;
+    --warning: #FBBF24;
+  }
+
+  .sepia {
+    --background: #F4ECD8;
+    --foreground: #433422;
+    --card: #FAF5E9;
+    --card-foreground: #433422;
+    --popover: #FAF5E9;
+    --popover-foreground: #433422;
+    --primary: #433422;
+    --primary-foreground: #FAF5E9;
+    --secondary: #EDE5D0;
+    --secondary-foreground: #433422;
+    --muted: #EDE5D0;
+    --muted-foreground: #8B7355;
+    --accent: #B8860B;
+    --accent-foreground: #FFFFFF;
+    --destructive: #C0392B;
+    --destructive-foreground: #FFFFFF;
+    --border: #D4C9A8;
+    --input: #D4C9A8;
+    --ring: #B8860B;
+    --surface: #EDE5D0;
+    --success: #27AE60;
+    --warning: #E67E22;
   }
 
   * {
@@ -60,6 +85,7 @@
 
   body {
     @apply bg-background text-foreground;
+    transition: background-color 200ms ease, color 200ms ease;
   }
 }
 
@@ -117,6 +143,7 @@
   margin-left: 0;
   margin-bottom: 0.75rem;
   color: var(--muted-foreground);
+  font-style: italic;
 }
 
 .ProseMirror pre {
@@ -147,4 +174,9 @@
 
 .ProseMirror strong {
   font-weight: 600;
+}
+
+.ProseMirror ::selection {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
 }

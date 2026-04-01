@@ -22,6 +22,8 @@ import { DraggableAtomOverlay } from "./draggable-atom";
 import { useDebounce } from "@/hooks/use-debounce";
 import type { Atom } from "@/types/atom";
 import type { Cluster } from "@/types/cluster";
+import { useApiKey } from "@/hooks/use-api-key";
+import { ApiKeySetup } from "@/components/ai/api-key-setup";
 
 export function StructureView({ projectId }: { projectId: string }) {
   const [atoms, setAtoms] = useState<Atom[]>([]);
@@ -78,6 +80,102 @@ export function StructureView({ projectId }: { projectId: string }) {
   );
 
   const debouncedSave = useDebounce(saveReorder, 1000);
+
+  const { apiKey, hasKey } = useApiKey();
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    clusters: { title: string; atomNumbers: number[] }[];
+  } | null>(null);
+
+
+  async function handleAiSuggest() {
+  if (!hasKey) return;
+
+  const allAtoms = [
+    ...atoms,
+    ...clusters.flatMap((c) => c.atoms),
+  ];
+
+  if (allAtoms.length < 3) {
+    alert("Add at least 3 thoughts in Brain Dump first.");
+    return;
+  }
+
+  setAiLoading(true);
+  setAiSuggestion(null);
+
+  try {
+    const res = await fetch("/api/ai/suggest-clusters", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        atoms: allAtoms.map((a) => a.content),
+      }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      alert(error.error || "AI request failed");
+      return;
+    }
+
+    const data = await res.json();
+    setAiSuggestion(data);
+  } catch {
+    alert("Failed to get AI suggestions. Check your connection.");
+  } finally {
+    setAiLoading(false);
+  }
+}
+
+async function handleApplySuggestion() {
+  if (!aiSuggestion) return;
+
+  const allAtoms = [
+    ...atoms,
+    ...clusters.flatMap((c) => c.atoms),
+  ];
+
+  for (const suggestion of aiSuggestion.clusters) {
+    // Create the cluster
+    const res = await fetch(`/api/projects/${projectId}/clusters`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: suggestion.title }),
+    });
+
+    if (!res.ok) continue;
+
+    const newCluster: Cluster = await res.json();
+
+    // Move atoms into it
+    const atomsToMove = suggestion.atomNumbers
+      .map((n) => allAtoms[n - 1])
+      .filter(Boolean);
+
+    const reorderData = atomsToMove.map((atom, i) => ({
+      id: atom!.id,
+      clusterId: newCluster.id,
+      position: i,
+    }));
+
+    if (reorderData.length > 0) {
+      await fetch(`/api/projects/${projectId}/atoms/reorder`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ atoms: reorderData }),
+      });
+    }
+  }
+
+  setAiSuggestion(null);
+  hasFetched.current = false;
+  setLoading(true);
+  fetchData();
+}
 
   function getAllAtomPositions(): { id: string; clusterId: string | null; position: number }[] {
     const result: { id: string; clusterId: string | null; position: number }[] = [];
@@ -244,7 +342,7 @@ export function StructureView({ projectId }: { projectId: string }) {
     }
   }
 
-  if (loading) {
+    if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -256,33 +354,100 @@ export function StructureView({ projectId }: { projectId: string }) {
     );
   }
 
+  const totalAtoms = atoms.length + clusters.flatMap((c) => c.atoms).length;
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold">Structure</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Drag atoms into clusters to build your outline.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="New cluster name..."
-            value={newClusterTitle}
-            onChange={(e) => setNewClusterTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreateCluster()}
-            className="h-9 w-48 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <button
-            onClick={handleCreateCluster}
-            disabled={!newClusterTitle.trim()}
-            className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
-          >
-            Add Cluster
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {hasKey && totalAtoms >= 3 && (
+            <button
+              onClick={handleAiSuggest}
+              disabled={aiLoading}
+              className="rounded-md bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+            >
+              {aiLoading ? "Thinking..." : "✨ AI Suggest Clusters"}
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="New cluster name..."
+              value={newClusterTitle}
+              onChange={(e) => setNewClusterTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateCluster()}
+              className="h-9 w-48 rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <button
+              onClick={handleCreateCluster}
+              disabled={!newClusterTitle.trim()}
+              className="h-9 rounded-md bg-accent px-3 text-sm font-medium text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
+            >
+              Add
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* AI Suggestion Preview */}
+      {aiSuggestion && (
+        <div className="mb-6 rounded-xl border border-accent/30 bg-accent/5 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">AI Cluster Suggestion</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={handleApplySuggestion}
+                className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-accent-foreground hover:bg-accent/90"
+              >
+                Apply All
+              </button>
+              <button
+                onClick={() => setAiSuggestion(null)}
+                className="rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {aiSuggestion.clusters.map((suggestion, i) => {
+              const allAtoms = [
+                ...atoms,
+                ...clusters.flatMap((c) => c.atoms),
+              ];
+              return (
+                <div key={i} className="rounded-lg bg-card p-3 shadow-sm">
+                  <h4 className="text-sm font-medium">{suggestion.title}</h4>
+                  <ul className="mt-2 space-y-1">
+                    {suggestion.atomNumbers.map((n) => {
+                      const atom = allAtoms[n - 1];
+                      return atom ? (
+                        <li key={n} className="text-xs text-muted-foreground">
+                          • {atom.content.slice(0, 80)}
+                          {atom.content.length > 80 ? "..." : ""}
+                        </li>
+                      ) : null;
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* API Key Setup (shown only if no key) */}
+      {!hasKey && totalAtoms >= 3 && (
+        <div className="mb-6">
+          <ApiKeySetup />
+        </div>
+      )}
 
       <DndContext
         sensors={sensors}

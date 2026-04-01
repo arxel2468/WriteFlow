@@ -3,7 +3,13 @@
 import { useState } from "react";
 import type { Cluster } from "@/types/cluster";
 
-export function ClusterReferencePanel({ clusters }: { clusters: Cluster[] }) {
+export function ClusterReferencePanel({
+  clusters,
+  onInsertAtom,
+}: {
+  clusters: Cluster[];
+  onInsertAtom?: (content: string) => void;
+}) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   function toggle(id: string) {
@@ -31,7 +37,9 @@ export function ClusterReferencePanel({ clusters }: { clusters: Cluster[] }) {
               {cluster.atoms.map((atom) => (
                 <li
                   key={atom.id}
-                  className="text-xs leading-relaxed text-muted-foreground"
+                  onClick={() => onInsertAtom?.(atom.content)}
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs leading-relaxed text-muted-foreground transition-colors hover:bg-accent/10 hover:text-foreground"
+                  title="Click to insert into editor"
                 >
                   • {atom.content}
                 </li>
@@ -43,6 +51,11 @@ export function ClusterReferencePanel({ clusters }: { clusters: Cluster[] }) {
       {clusters.length === 0 && (
         <p className="text-xs text-muted-foreground">
           Structure your atoms first to see your outline here.
+        </p>
+      )}
+      {clusters.length > 0 && onInsertAtom && (
+        <p className="text-xs text-muted-foreground italic">
+          Click any thought to insert it into your draft.
         </p>
       )}
     </div>
