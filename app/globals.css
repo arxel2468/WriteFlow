@@ -2,20 +2,149 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #FFFFFF;
+    --foreground: #1D1D1F;
+    --card: #FFFFFF;
+    --card-foreground: #1D1D1F;
+    --popover: #FFFFFF;
+    --popover-foreground: #1D1D1F;
+    --primary: #1D1D1F;
+    --primary-foreground: #FFFFFF;
+    --secondary: #F5F5F7;
+    --secondary-foreground: #1D1D1F;
+    --muted: #F5F5F7;
+    --muted-foreground: #6E6E73;
+    --accent: #0071E3;
+    --accent-foreground: #FFFFFF;
+    --destructive: #FF3B30;
+    --destructive-foreground: #FFFFFF;
+    --border: #E5E5E7;
+    --input: #E5E5E7;
+    --ring: #0071E3;
+    --radius: 0.75rem;
+    --surface: #F5F5F7;
+    --success: #34C759;
+    --warning: #FF9F0A;
+  }
+
+  .dark {
+    --background: #000000;
+    --foreground: #F5F5F7;
+    --card: #1C1C1E;
+    --card-foreground: #F5F5F7;
+    --popover: #1C1C1E;
+    --popover-foreground: #F5F5F7;
+    --primary: #F5F5F7;
+    --primary-foreground: #000000;
+    --secondary: #2C2C2E;
+    --secondary-foreground: #F5F5F7;
+    --muted: #1C1C1E;
+    --muted-foreground: #8E8E93;
+    --accent: #0A84FF;
+    --accent-foreground: #FFFFFF;
+    --destructive: #FF453A;
+    --destructive-foreground: #FFFFFF;
+    --border: #38383A;
+    --input: #38383A;
+    --ring: #0A84FF;
+    --surface: #1C1C1E;
+    --success: #30D158;
+    --warning: #FFD60A;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tiptap Editor Styles */
+.ProseMirror {
+  line-height: 1.7;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--muted-foreground);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ProseMirror li {
+  margin-bottom: 0.25rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-bottom: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.ProseMirror pre {
+  background-color: var(--surface);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  overflow-x: auto;
+}
+
+.ProseMirror code {
+  background-color: var(--surface);
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.875em;
+}
+
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5rem 0;
+}
+
+.ProseMirror strong {
+  font-weight: 600;
 }
