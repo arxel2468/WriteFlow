@@ -3,7 +3,7 @@
 
 A web-based writing tool that transforms scattered thoughts into structured, polished writing. WriteFlow provides a three-stage pipeline — Dump, Structure, Write — with an optional AI thinking partner that analyzes your logic without ever writing for you.
 
-**Live:** [writeflow.vercel.app](https://writeflow.vercel.app)
+**Live:** [writeflowapp.vercel.app](https://writeflowapp.vercel.app)
 
 ---
 
