@@ -11,7 +11,7 @@ export function tiptapToMarkdown(doc: TiptapNode): string {
   return doc.content.map((node) => nodeToMd(node)).join("\n");
 }
 
-function nodeToMd(node: TiptapNode, depth = 0): string {
+function nodeToMd(node: TiptapNode): string {
   switch (node.type) {
     case "paragraph":
       return inlineContent(node) + "\n";
