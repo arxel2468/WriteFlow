@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 
 export async function GET(
   _request: NextRequest,
@@ -48,7 +49,7 @@ export async function PATCH(
 
     const body = await request.json();
     const { content, wordCount } = body as {
-      content: Record<string, unknown>;
+      content: Prisma.InputJsonValue;
       wordCount: number;
     };
 

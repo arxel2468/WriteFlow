@@ -5,9 +5,11 @@ import { TiptapEditor } from "./tiptap-editor";
 import { ClusterReferencePanel } from "./cluster-reference-panel";
 import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 import { PhaseGuide } from "@/components/shared/phase-guide";
+import { HistoryPanel } from "./history-panel";
 import type { Cluster } from "@/types/cluster";
 import type { Draft } from "@/types/draft";
 import type { Editor } from "@tiptap/react";
+import type { Prisma } from "@prisma/client";
 
 export function WriteView({ projectId }: { projectId: string }) {
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -16,6 +18,7 @@ export function WriteView({ projectId }: { projectId: string }) {
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
   const [focusMode, setFocusMode] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const editorRef = useRef<Editor | null>(null);
   const hasFetched = useRef(false);
 
@@ -42,6 +45,14 @@ export function WriteView({ projectId }: { projectId: string }) {
     }
   }, [fetchData]);
 
+  // Auto-snapshot every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch(`/api/projects/${projectId}/snapshots`, { method: "POST", body: JSON.stringify({}) });
+    }, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [projectId]);
+
   const handleSave = useCallback(
     async (content: Record<string, unknown>, wordCount: number) => {
       setSaveStatus("saving");
@@ -63,6 +74,13 @@ export function WriteView({ projectId }: { projectId: string }) {
   function handleInsertAtom(content: string) {
     if (editorRef.current) {
       editorRef.current.chain().focus().insertContent(`<p>${content}</p>`).run();
+    }
+  }
+
+  function handleRestore(content: Record<string, unknown>, words: number) {
+    if (editorRef.current) {
+      editorRef.current.commands.setContent(content);
+      setDraft((prev) => prev ? { ...prev, content: content as Prisma.JsonValue, wordCount: words } : null);
     }
   }
 
@@ -113,6 +131,12 @@ export function WriteView({ projectId }: { projectId: string }) {
             {saveStatus === "idle" && "All changes saved"}
           </span>
           <button
+            onClick={() => setShowHistory(true)}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            🕘 History
+          </button>
+          <button
             onClick={handleExportMarkdown}
             disabled={exporting}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
@@ -158,8 +182,8 @@ export function WriteView({ projectId }: { projectId: string }) {
         <div className="flex-1">
           <TiptapEditor
             initialContent={
-              draft?.content && Object.keys(draft.content).length > 0
-                ? draft.content
+              draft?.content && Object.keys(draft.content as object).length > 0
+                ? (draft.content as Record<string, unknown>)
                 : undefined
             }
             onSave={handleSave}
@@ -169,6 +193,14 @@ export function WriteView({ projectId }: { projectId: string }) {
           />
         </div>
       </div>
+
+      {showHistory && (
+        <HistoryPanel
+          projectId={projectId}
+          onClose={() => setShowHistory(false)}
+          onRestore={handleRestore}
+        />
+      )}
     </div>
   );
 }
