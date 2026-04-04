@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type Theme = "light" | "dark" | "sepia";
+export type Theme = "light" | "dark";
 
 type WriterSettings = {
   fontSize: number;
@@ -42,7 +42,7 @@ export const useThemeStore = create<ThemeStore>((set) => ({
   setTheme: (theme) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("writeflow-theme", theme);
-      document.documentElement.classList.remove("light", "dark", "sepia");
+      document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(theme);
     }
     set({ theme });

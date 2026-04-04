@@ -1,21 +1,52 @@
-import type { Metadata } from "next";
-import "@fontsource-variable/inter";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { redirect, notFound } from "next/navigation";
+import { WorkspaceNav } from "@/components/workspace/workspace-nav";
+import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "WriteFlow",
-  description: "Transform scattered thoughts into structured, polished writing.",
-};
-
-export default function RootLayout({
+export default async function ProjectLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) redirect("/login");
+
+  let project;
+  try {
+    project = await prisma.project.findFirst({
+      where: { id, userId: user.id },
+    });
+  } catch {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium">Connection issue</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Unable to reach the database. Check your connection.
+          </p>
+          <Link
+            href="/dashboard"
+            className="mt-4 inline-block rounded-md bg-accent px-4 py-2 text-sm text-accent-foreground"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) notFound();
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-background text-foreground antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
-    </html>
+    <div className="flex min-h-screen flex-col">
+      <WorkspaceNav projectId={id} projectTitle={project.title} />
+      <main className="flex-1">{children}</main>
+    </div>
   );
 }

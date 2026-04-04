@@ -12,18 +12,15 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { UnclusteredZone } from "./unclustered-zone";
 import { ClusterColumn } from "./cluster-column";
 import { DraggableAtomOverlay } from "./draggable-atom";
 import { useDebounce } from "@/hooks/use-debounce";
-import type { Atom } from "@/types/atom";
-import type { Cluster } from "@/types/cluster";
 import { useApiKey } from "@/hooks/use-api-key";
 import { ApiKeySetup } from "@/components/ai/api-key-setup";
+import { PhaseGuide } from "@/components/shared/phase-guide";
+import type { Atom } from "@/types/atom";
+import type { Cluster } from "@/types/cluster";
 
 export function StructureView({ projectId }: { projectId: string }) {
   const [atoms, setAtoms] = useState<Atom[]>([]);
@@ -32,6 +29,12 @@ export function StructureView({ projectId }: { projectId: string }) {
   const [activeAtom, setActiveAtom] = useState<Atom | null>(null);
   const [newClusterTitle, setNewClusterTitle] = useState("");
   const hasFetched = useRef(false);
+
+  const { apiKey, hasKey } = useApiKey();
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    clusters: { title: string; atomNumbers: number[] }[];
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -81,102 +84,6 @@ export function StructureView({ projectId }: { projectId: string }) {
 
   const debouncedSave = useDebounce(saveReorder, 1000);
 
-  const { apiKey, hasKey } = useApiKey();
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{
-    clusters: { title: string; atomNumbers: number[] }[];
-  } | null>(null);
-
-
-  async function handleAiSuggest() {
-  if (!hasKey) return;
-
-  const allAtoms = [
-    ...atoms,
-    ...clusters.flatMap((c) => c.atoms),
-  ];
-
-  if (allAtoms.length < 3) {
-    alert("Add at least 3 thoughts in Brain Dump first.");
-    return;
-  }
-
-  setAiLoading(true);
-  setAiSuggestion(null);
-
-  try {
-    const res = await fetch("/api/ai/suggest-clusters", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        atoms: allAtoms.map((a) => a.content),
-      }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      alert(error.error || "AI request failed");
-      return;
-    }
-
-    const data = await res.json();
-    setAiSuggestion(data);
-  } catch {
-    alert("Failed to get AI suggestions. Check your connection.");
-  } finally {
-    setAiLoading(false);
-  }
-}
-
-async function handleApplySuggestion() {
-  if (!aiSuggestion) return;
-
-  const allAtoms = [
-    ...atoms,
-    ...clusters.flatMap((c) => c.atoms),
-  ];
-
-  for (const suggestion of aiSuggestion.clusters) {
-    // Create the cluster
-    const res = await fetch(`/api/projects/${projectId}/clusters`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: suggestion.title }),
-    });
-
-    if (!res.ok) continue;
-
-    const newCluster: Cluster = await res.json();
-
-    // Move atoms into it
-    const atomsToMove = suggestion.atomNumbers
-      .map((n) => allAtoms[n - 1])
-      .filter(Boolean);
-
-    const reorderData = atomsToMove.map((atom, i) => ({
-      id: atom!.id,
-      clusterId: newCluster.id,
-      position: i,
-    }));
-
-    if (reorderData.length > 0) {
-      await fetch(`/api/projects/${projectId}/atoms/reorder`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ atoms: reorderData }),
-      });
-    }
-  }
-
-  setAiSuggestion(null);
-  hasFetched.current = false;
-  setLoading(true);
-  fetchData();
-}
-
   function getAllAtomPositions(): { id: string; clusterId: string | null; position: number }[] {
     const result: { id: string; clusterId: string | null; position: number }[] = [];
     atoms.forEach((a, i) => result.push({ id: a.id, clusterId: null, position: i }));
@@ -211,7 +118,6 @@ async function handleApplySuggestion() {
 
     if (!atomToMove) return;
 
-    // Remove from source
     if (sourceContainer === "unclustered") {
       setAtoms((prev) => prev.filter((a) => a.id !== activeId));
     } else {
@@ -224,7 +130,6 @@ async function handleApplySuggestion() {
       );
     }
 
-    // Add to destination
     if (destContainer === "unclustered") {
       setAtoms((prev) => [...prev, { ...atomToMove, clusterId: null }]);
     } else {
@@ -313,7 +218,6 @@ async function handleApplySuggestion() {
     const cluster = clusters.find((c) => c.id === clusterId);
     if (!cluster) return;
 
-    // Move atoms back to unclustered
     setAtoms((prev) => [...prev, ...cluster.atoms.map((a) => ({ ...a, clusterId: null }))]);
     setClusters((prev) => prev.filter((c) => c.id !== clusterId));
 
@@ -342,7 +246,88 @@ async function handleApplySuggestion() {
     }
   }
 
-    if (loading) {
+  async function handleAiSuggest() {
+    if (!hasKey) return;
+
+    const allAtoms = [...atoms, ...clusters.flatMap((c) => c.atoms)];
+
+    if (allAtoms.length < 3) {
+      alert("Add at least 3 thoughts in Brain Dump first.");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiSuggestion(null);
+
+    try {
+      const res = await fetch("/api/ai/suggest-clusters", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          atoms: allAtoms.map((a) => a.content),
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || "AI request failed");
+        return;
+      }
+
+      const data = await res.json();
+      setAiSuggestion(data);
+    } catch {
+      alert("Failed to get AI suggestions. Check your connection.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function handleApplySuggestion() {
+    if (!aiSuggestion) return;
+
+    const allAtoms = [...atoms, ...clusters.flatMap((c) => c.atoms)];
+
+    for (const suggestion of aiSuggestion.clusters) {
+      const res = await fetch(`/api/projects/${projectId}/clusters`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: suggestion.title }),
+      });
+
+      if (!res.ok) continue;
+
+      const newCluster: Cluster = await res.json();
+
+      const atomsToMove = suggestion.atomNumbers
+        .map((n) => allAtoms[n - 1])
+        .filter(Boolean);
+
+      const reorderData = atomsToMove.map((atom, i) => ({
+        id: atom!.id,
+        clusterId: newCluster.id,
+        position: i,
+      }));
+
+      if (reorderData.length > 0) {
+        await fetch(`/api/projects/${projectId}/atoms/reorder`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ atoms: reorderData }),
+        });
+      }
+    }
+
+    setAiSuggestion(null);
+    hasFetched.current = false;
+    setLoading(true);
+    fetchData();
+  }
+
+  if (loading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -370,7 +355,7 @@ async function handleApplySuggestion() {
             <button
               onClick={handleAiSuggest}
               disabled={aiLoading}
-              className="rounded-md bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+              className="rounded-md bg-card border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             >
               {aiLoading ? "Thinking..." : "✨ AI Suggest Clusters"}
             </button>
@@ -395,34 +380,47 @@ async function handleApplySuggestion() {
         </div>
       </div>
 
+      <PhaseGuide phase="structure" itemCount={clusters.length} />
+
+      {/* API Key Setup (shown only if no key and enough atoms) */}
+      {!hasKey && totalAtoms >= 3 && (
+        <div className="mb-6">
+          <ApiKeySetup />
+        </div>
+      )}
+
       {/* AI Suggestion Preview */}
       {aiSuggestion && (
-        <div className="mb-6 rounded-xl border border-accent/30 bg-accent/5 p-4">
+        <div className="mb-6 rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold">AI Cluster Suggestion</h3>
+            <div>
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <span>✨</span> AI Suggestion
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Powered by Llama-3.1-8B. You can apply these or dismiss them.
+              </p>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={handleApplySuggestion}
-                className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-accent-foreground hover:bg-accent/90"
+                className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/90"
               >
                 Apply All
               </button>
               <button
                 onClick={() => setAiSuggestion(null)}
-                className="rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+                className="rounded-md border border-input px-3 py-1.5 text-xs text-foreground hover:bg-muted"
               >
                 Dismiss
               </button>
             </div>
           </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {aiSuggestion.clusters.map((suggestion, i) => {
-              const allAtoms = [
-                ...atoms,
-                ...clusters.flatMap((c) => c.atoms),
-              ];
+              const allAtoms = [...atoms, ...clusters.flatMap((c) => c.atoms)];
               return (
-                <div key={i} className="rounded-lg bg-card p-3 shadow-sm">
+                <div key={i} className="rounded-lg border border-border bg-background p-3">
                   <h4 className="text-sm font-medium">{suggestion.title}</h4>
                   <ul className="mt-2 space-y-1">
                     {suggestion.atomNumbers.map((n) => {
@@ -442,13 +440,6 @@ async function handleApplySuggestion() {
         </div>
       )}
 
-      {/* API Key Setup (shown only if no key) */}
-      {!hasKey && totalAtoms >= 3 && (
-        <div className="mb-6">
-          <ApiKeySetup />
-        </div>
-      )}
-
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -458,7 +449,6 @@ async function handleApplySuggestion() {
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-[300px_1fr]">
           <UnclusteredZone atoms={atoms} />
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {clusters.map((cluster) => (
               <ClusterColumn
@@ -470,7 +460,6 @@ async function handleApplySuggestion() {
             ))}
           </div>
         </div>
-
         <DragOverlay>
           {activeAtom ? <DraggableAtomOverlay atom={activeAtom} /> : null}
         </DragOverlay>

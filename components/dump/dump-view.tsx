@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AtomInput } from "./atom-input";
 import { AtomCard } from "./atom-card";
 import type { Atom } from "@/types/atom";
+import { PhaseGuide } from "@/components/shared/phase-guide";
 
 export function DumpView({ projectId }: { projectId: string }) {
   const [atoms, setAtoms] = useState<Atom[]>([]);
@@ -114,6 +115,7 @@ export function DumpView({ projectId }: { projectId: string }) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
+	<PhaseGuide phase="dump" itemCount={atoms.length} />
         <h2 className="text-xl font-semibold">Brain Dump</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Get every thought out. No organizing, no pressure.

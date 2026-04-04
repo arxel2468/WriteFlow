@@ -81,8 +81,9 @@ export function AiAnalysisPanel({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        AI Thinking Partner
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex justify-between items-center">
+        <span>AI Thinking Partner</span>
+        <span className="text-[10px] font-normal opacity-60">Llama-3.1-8B</span>
       </h3>
 
       <div className="space-y-2">
@@ -91,13 +92,13 @@ export function AiAnalysisPanel({
             key={tool.type}
             onClick={() => runAnalysis(tool.type)}
             disabled={loading}
-            className={`w-full rounded-lg p-3 text-left transition-colors ${
+            className={`w-full rounded-lg border p-3 text-left transition-colors ${
               activeType === tool.type && result
-                ? "bg-accent/10 ring-1 ring-accent/30"
-                : "bg-card shadow-sm hover:shadow-md"
+                ? "border-accent bg-accent/5"
+                : "border-border bg-card hover:bg-muted"
             } disabled:opacity-50`}
           >
-            <span className="text-sm font-medium">{tool.label}</span>
+            <span className="text-sm font-medium text-foreground">{tool.label}</span>
             <br />
             <span className="text-xs text-muted-foreground">{tool.desc}</span>
           </button>
@@ -105,10 +106,10 @@ export function AiAnalysisPanel({
       </div>
 
       {loading && (
-        <div className="rounded-lg bg-card p-4 shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-            Analyzing...
+            Analyzing with Llama...
           </div>
         </div>
       )}
@@ -120,8 +121,8 @@ export function AiAnalysisPanel({
       )}
 
       {result && (
-        <div className="rounded-lg bg-card p-4 shadow-sm">
-          <div className="flex items-center justify-between">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <h4 className="text-xs font-semibold uppercase text-muted-foreground">
               Analysis Result
             </h4>
@@ -135,14 +136,14 @@ export function AiAnalysisPanel({
               Clear
             </button>
           </div>
-          <div className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">
+          <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
             {result}
           </div>
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground italic">
-        AI analyzes your writing. It never writes for you.
+      <p className="text-[10px] text-muted-foreground italic text-center">
+        Powered by Groq. AI never writes text for you.
       </p>
     </div>
   );

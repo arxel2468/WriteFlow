@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TiptapEditor } from "./tiptap-editor";
 import { ClusterReferencePanel } from "./cluster-reference-panel";
+import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
+import { PhaseGuide } from "@/components/shared/phase-guide";
 import type { Cluster } from "@/types/cluster";
 import type { Draft } from "@/types/draft";
 import type { Editor } from "@tiptap/react";
-import { AiAnalysisPanel } from "@/components/ai/ai-analysis-panel";
 
 export function WriteView({ projectId }: { projectId: string }) {
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -14,6 +15,7 @@ export function WriteView({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "idle">("idle");
   const [focusMode, setFocusMode] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const editorRef = useRef<Editor | null>(null);
   const hasFetched = useRef(false);
 
@@ -24,14 +26,8 @@ export function WriteView({ projectId }: { projectId: string }) {
         fetch(`/api/projects/${projectId}/clusters`),
       ]);
 
-      if (draftRes.ok) {
-        const draftData: Draft = await draftRes.json();
-        setDraft(draftData);
-      }
-      if (clustersRes.ok) {
-        const clustersData: Cluster[] = await clustersRes.json();
-        setClusters(clustersData);
-      }
+      if (draftRes.ok) setDraft(await draftRes.json());
+      if (clustersRes.ok) setClusters(await clustersRes.json());
     } catch {
       console.error("Failed to fetch data");
     } finally {
@@ -66,11 +62,30 @@ export function WriteView({ projectId }: { projectId: string }) {
 
   function handleInsertAtom(content: string) {
     if (editorRef.current) {
-      editorRef.current
-        .chain()
-        .focus()
-        .insertContent(`<p>${content}</p>`)
-        .run();
+      editorRef.current.chain().focus().insertContent(`<p>${content}</p>`).run();
+    }
+  }
+
+  async function handleExportMarkdown() {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export/markdown`);
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Export failed");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] || "export.md";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Export failed. Check your connection.");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -84,24 +99,32 @@ export function WriteView({ projectId }: { projectId: string }) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold">Write</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Expand your clusters into full prose.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md">
             {saveStatus === "saving" && "Saving..."}
             {saveStatus === "saved" && "✓ Saved"}
+            {saveStatus === "idle" && "All changes saved"}
           </span>
           <button
+            onClick={handleExportMarkdown}
+            disabled={exporting}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
+            {exporting ? "Exporting..." : "Export .md"}
+          </button>
+          <button
             onClick={() => setFocusMode(!focusMode)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
               focusMode
-                ? "bg-accent text-accent-foreground"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                ? "border-accent bg-accent text-accent-foreground"
+                : "border-border bg-card text-foreground hover:bg-muted"
             }`}
           >
             {focusMode ? "Exit Focus" : "Focus Mode"}
@@ -109,13 +132,17 @@ export function WriteView({ projectId }: { projectId: string }) {
         </div>
       </div>
 
+      <PhaseGuide phase="write" itemCount={0} />
+
       <div className="flex gap-6">
-        {!focusMode && clusters.length > 0 && (
+        {!focusMode && (
           <div className="w-72 shrink-0 space-y-6">
-            <ClusterReferencePanel
-              clusters={clusters}
-              onInsertAtom={handleInsertAtom}
-            />
+            {clusters.length > 0 && (
+              <ClusterReferencePanel
+                clusters={clusters}
+                onInsertAtom={handleInsertAtom}
+              />
+            )}
             <AiAnalysisPanel
               getText={() => editorRef.current?.getText() || ""}
               getSelectedText={() => {
