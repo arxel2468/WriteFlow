@@ -11,11 +11,15 @@ import { useCallback, useEffect } from "react";
 import { useThemeStore } from "@/stores/theme-store";
 import type { Editor } from "@tiptap/react";
 
+
 type TiptapEditorProps = {
   initialContent?: Record<string, unknown>;
   onSave: (content: Record<string, unknown>, wordCount: number) => void;
   onEditorReady?: (editor: Editor) => void;
+  wordGoal?: number;
 };
+
+
 
 const widthMap = {
   narrow: "max-w-xl",
@@ -23,7 +27,7 @@ const widthMap = {
   wide: "max-w-5xl",
 };
 
-export function TiptapEditor({ initialContent, onSave, onEditorReady }: TiptapEditorProps) {
+export function TiptapEditor({ initialContent, onSave, onEditorReady, wordGoal }: TiptapEditorProps) {
   const settings = useThemeStore((s) => s.writerSettings);
 
   const debouncedSave = useDebounce(
@@ -75,17 +79,33 @@ export function TiptapEditor({ initialContent, onSave, onEditorReady }: TiptapEd
   const wordCount = editor.storage.characterCount?.words() ?? 0;
   const charCount = editor.storage.characterCount?.characters() ?? 0;
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
+  
 
   return (
     <div className={`mx-auto ${widthMap[settings.editorWidth]}`}>
       <EditorToolbar editor={editor} />
       <EditorContent editor={editor} />
-      <div className="mt-2 flex items-center justify-between px-1 text-xs text-muted-foreground">
-        <span>
-          {wordCount} words · {charCount} characters
-        </span>
-        <span>{readingTime} min read</span>
+      <div className="mt-2 space-y-1.5 px-1">
+  <div className="flex items-center justify-between text-xs text-muted-foreground">
+    <span>{wordCount} words · {charCount} characters</span>
+    <span>{readingTime} min read</span>
+  </div>
+  {wordGoal && wordGoal > 0 && (
+    <div>
+      <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-accent transition-all duration-500"
+          style={{ width: `${Math.min(100, Math.round((wordCount / wordGoal) * 100))}%` }}
+        />
       </div>
+      <p className="mt-1 text-[10px] text-muted-foreground text-right">
+        {wordCount >= wordGoal
+          ? `✓ Goal reached (${wordGoal} words)`
+          : `${wordGoal - wordCount} words to goal`}
+      </p>
+    </div>
+  )}
+</div>
     </div>
   );
 }

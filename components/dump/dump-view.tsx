@@ -115,7 +115,7 @@ export function DumpView({ projectId }: { projectId: string }) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6">
-	<PhaseGuide phase="dump" itemCount={atoms.length} />
+	<PhaseGuide phase="dump" itemCount={atoms.length} projectId={projectId}/>
         <h2 className="text-xl font-semibold">Brain Dump</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Get every thought out. No organizing, no pressure.

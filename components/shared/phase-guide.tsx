@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 type PhaseGuideProps = {
   phase: "dump" | "structure" | "write";
   itemCount: number;
+  projectId?: string;
 };
 
 const guides = {
@@ -43,21 +44,43 @@ const guides = {
   },
 };
 
-export function PhaseGuide({ phase, itemCount }: PhaseGuideProps) {
+export function PhaseGuide({ phase, itemCount, projectId }: PhaseGuideProps) {
   const [dismissed, setDismissed] = useState(false);
 
+  const storageKey = projectId
+    ? `writeflow-guide-${phase}-${projectId}`
+    : `writeflow-guide-${phase}`;
+
   useEffect(() => {
-    const stored = localStorage.getItem(`writeflow-guide-${phase}`);
+    const stored = localStorage.getItem(storageKey);
     if (stored === "dismissed") setDismissed(true);
-  }, [phase]);
+  }, [storageKey]);
 
   function handleDismiss() {
     setDismissed(true);
-    localStorage.setItem(`writeflow-guide-${phase}`, "dismissed");
+    localStorage.setItem(storageKey, "dismissed");
   }
 
-  if (dismissed || itemCount > 3) return null;
+  function handleReset() {
+    setDismissed(false);
+    localStorage.removeItem(storageKey);
+  }
 
+  if (itemCount > 3 && dismissed) return null;
+
+  // After dismissal but itemCount still ≤ 3, show compact help button
+  if (dismissed) {
+    return (
+      <button
+        onClick={handleReset}
+        className="mb-4 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        title="Show guide"
+      >
+        ? How this works
+      </button>
+    );
+  }
+  
   const guide = guides[phase];
 
   return (

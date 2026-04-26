@@ -8,10 +8,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  TouchSensor,
+  KeyboardSensor,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
+  
 } from "@dnd-kit/core";
+import { toast } from "sonner";
 import { UnclusteredZone } from "./unclustered-zone";
 import { ClusterColumn } from "./cluster-column";
 import { DraggableAtomOverlay } from "./draggable-atom";
@@ -21,6 +25,7 @@ import { ApiKeySetup } from "@/components/ai/api-key-setup";
 import { PhaseGuide } from "@/components/shared/phase-guide";
 import type { Atom } from "@/types/atom";
 import type { Cluster } from "@/types/cluster";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 export function StructureView({ projectId }: { projectId: string }) {
   const [atoms, setAtoms] = useState<Atom[]>([]);
@@ -36,9 +41,15 @@ export function StructureView({ projectId }: { projectId: string }) {
     clusters: { title: string; atomNumbers: number[] }[];
   } | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
+const sensors = useSensors(
+  useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  useSensor(TouchSensor, {
+    activationConstraint: { delay: 250, tolerance: 8 },
+  }),
+  useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  })
+);
 
   const fetchData = useCallback(async () => {
     try {
@@ -252,7 +263,7 @@ export function StructureView({ projectId }: { projectId: string }) {
     const allAtoms = [...atoms, ...clusters.flatMap((c) => c.atoms)];
 
     if (allAtoms.length < 3) {
-      alert("Add at least 3 thoughts in Brain Dump first.");
+      toast.warning("Add at least 3 thoughts in Brain Dump first.");
       return;
     }
 
@@ -273,14 +284,14 @@ export function StructureView({ projectId }: { projectId: string }) {
 
       if (!res.ok) {
         const error = await res.json();
-        alert(error.error || "AI request failed");
-        return;
+        toast.error(error.error || "AI request failed");
       }
 
       const data = await res.json();
       setAiSuggestion(data);
+      toast.success("AI suggestions ready — review and apply below.");
     } catch {
-      alert("Failed to get AI suggestions. Check your connection.");
+      toast.error("Failed to get AI suggestions. Check your connection.");
     } finally {
       setAiLoading(false);
     }
@@ -325,6 +336,7 @@ export function StructureView({ projectId }: { projectId: string }) {
     hasFetched.current = false;
     setLoading(true);
     fetchData();
+    toast.success("Clusters applied successfully.");
   }
 
   if (loading) {
@@ -380,7 +392,7 @@ export function StructureView({ projectId }: { projectId: string }) {
         </div>
       </div>
 
-      <PhaseGuide phase="structure" itemCount={clusters.length} />
+      <PhaseGuide phase="structure" itemCount={clusters.length} projectId={projectId}/>
 
       {/* API Key Setup (shown only if no key and enough atoms) */}
       {!hasKey && totalAtoms >= 3 && (

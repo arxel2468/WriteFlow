@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { Snapshot } from "@/types/snapshot";
+import { toast } from "sonner";
 
 export function HistoryPanel({
   projectId,
@@ -50,21 +51,38 @@ export function HistoryPanel({
   }
 
   async function handleRestore(snapshot: Snapshot) {
-    if (!confirm("Restore this version? Your current unsaved changes will be lost.")) return;
-    
-    setRestoring(snapshot.id);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/snapshots/${snapshot.id}/restore`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        onRestore(snapshot.content as Record<string, unknown>, snapshot.wordCount);
-        onClose();
-      }
-    } finally {
-      setRestoring(null);
-    }
-  }
+  toast("Restore this version?", {
+    description: "Your current unsaved changes will be lost.",
+    action: {
+      label: "Restore",
+      onClick: async () => {
+        setRestoring(snapshot.id);
+        try {
+          const res = await fetch(
+            `/api/projects/${projectId}/snapshots/${snapshot.id}/restore`,
+            { method: "POST" }
+          );
+          if (res.ok) {
+            onRestore(
+              snapshot.content as Record<string, unknown>,
+              snapshot.wordCount
+            );
+            onClose();
+            toast.success("Version restored.");
+          } else {
+            toast.error("Failed to restore. Try again.");
+          }
+        } finally {
+          setRestoring(null);
+        }
+      },
+    },
+    cancel: {
+      label: "Cancel",
+      onClick: () => {},
+    },
+  });
+}
 
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-80 border-l border-border bg-card p-4 shadow-xl overflow-y-auto">
