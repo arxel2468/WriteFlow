@@ -24,7 +24,7 @@ export async function GET() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const dates = new Set(
-      sessions.map((s) => new Date(s.date).toISOString().slice(0, 10))
+      sessions.map((s: {date: Date | string}) => new Date(s.date).toISOString().slice(0, 10))
     );
 
     let streak = 0;
@@ -39,7 +39,7 @@ export async function GET() {
       }
     }
 
-    const totalWords = sessions.reduce((sum, s) => sum + s.wordCount, 0);
+    const totalWords = sessions.reduce((sum: number, s) => sum + s.wordCount, 0);
     const totalDays = dates.size;
 
     return NextResponse.json({ sessions, streak, totalWords, totalDays });

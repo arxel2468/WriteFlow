@@ -137,7 +137,7 @@ export function ClusterReferencePanel({
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                         Opening sentences — click to insert
                       </p>
-                      {expansions[atom.id].map((sentence, i) => (
+                      {expansions[atom.id]!.map((sentence, i) => (
                         <button
                           key={i}
                           onClick={() => handleInsertSentence(sentence)}
@@ -157,7 +157,7 @@ export function ClusterReferencePanel({
                             delete next[atom.id];
                             return next;
                           });
-                          handleExpand(atom.id, atom.content);
+                          void handleExpand(atom.id, atom.content);
                         }}
                         className="w-full text-center text-[10px] text-muted-foreground hover:text-foreground pt-1 transition-colors"
                       >
