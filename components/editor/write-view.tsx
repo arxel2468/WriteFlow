@@ -240,7 +240,7 @@ function handleGoalChange(val: number) {
 
       <div className={focusMode ? "mx-auto max-w-3xl px-6 pb-16" : "flex gap-6"}>
         {!focusMode && (
-          <div className="w-72 shrink-0 space-y-6">
+          <div className="w-72 shrink-0 space-y-6 self-start sticky top-20">
             {clusters.length > 0 && (
               <ClusterReferencePanel
                 clusters={clusters}
