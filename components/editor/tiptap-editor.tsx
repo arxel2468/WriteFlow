@@ -32,11 +32,6 @@ const widthMap = {
   wide: "max-w-5xl",
 };
 
-const [liveWordCount, setLiveWordCount] = useState(0);
-
-useWritingSession(liveWordCount);
-
-
 
 export function TiptapEditor({
   initialContent,
@@ -45,9 +40,10 @@ export function TiptapEditor({
   wordGoal,
   typewriterMode = false,
 }: TiptapEditorProps) {
-  const settings = useThemeStore((s) => s.writerSettings);
-
-  const debouncedSave = useDebounce(
+    const settings = useThemeStore((s) => s.writerSettings);
+    const [liveWordCount, setLiveWordCount] = useState(0);
+    useWritingSession(liveWordCount);
+    const debouncedSave = useDebounce(
     useCallback(
       (json: Record<string, unknown>, words: number) => {
         onSave(json, words);
