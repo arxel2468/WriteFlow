@@ -26,6 +26,7 @@ export function WriteView({ projectId }: { projectId: string }) {
   const hasFetched = useRef(false);
   const [wordGoal, setWordGoal] = useState<number>(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [typewriterMode, setTypewriterMode] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -211,7 +212,10 @@ function handleGoalChange(val: number) {
               />
             </div>
             <button
-              onClick={() => setFocusMode(!focusMode)}
+              onClick={() => {
+                setFocusMode(!focusMode);
+                if (focusMode) setTypewriterMode(false);
+              }}
               className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                 focusMode
                   ? "border-accent bg-accent text-accent-foreground"
@@ -219,6 +223,16 @@ function handleGoalChange(val: number) {
               }`}
             >
               {focusMode ? "Exit Focus" : "Focus Mode"}
+            </button>
+            <button
+              onClick={() => setTypewriterMode(!typewriterMode)}
+              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                typewriterMode
+                  ? "border-accent bg-accent text-accent-foreground"
+                  : "border-border bg-card text-foreground hover:bg-muted"
+              }`}
+            >
+              {typewriterMode ? "Exit Typewriter" : "Typewriter"}
             </button>
           </div>
         </div>
@@ -287,6 +301,7 @@ function handleGoalChange(val: number) {
             onSave={handleSave}
             onEditorReady={(editor) => { editorRef.current = editor; }}
             wordGoal={wordGoal}
+            typewriterMode={typewriterMode}
           />
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { ProjectGrid } from "./project-grid";
 import { UserMenu } from "@/components/layout/user-menu";
+import { WritingHeatmap } from "./writing-heatmap";
 
 type DashboardContentProps = {
   user: { name: string };
@@ -18,6 +19,10 @@ export function DashboardContent({ user }: DashboardContentProps) {
           </p>
         </div>
         <UserMenu name={user.name} />
+      </div>
+
+      <div className="mb-8">
+        <WritingHeatmap />
       </div>
 
       <ProjectGrid />

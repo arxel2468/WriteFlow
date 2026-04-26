@@ -7,17 +7,22 @@ import Underline from "@tiptap/extension-underline";
 import CharacterCount from "@tiptap/extension-character-count";
 import { EditorToolbar } from "./editor-toolbar";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useThemeStore } from "@/stores/theme-store";
 import type { Editor } from "@tiptap/react";
+import { useWritingSession } from "@/hooks/use-writing-session";
 
 
+
+// Add prop
 type TiptapEditorProps = {
   initialContent?: Record<string, unknown>;
   onSave: (content: Record<string, unknown>, wordCount: number) => void;
   onEditorReady?: (editor: Editor) => void;
   wordGoal?: number;
+  typewriterMode?: boolean;
 };
+
 
 
 
@@ -27,7 +32,19 @@ const widthMap = {
   wide: "max-w-5xl",
 };
 
-export function TiptapEditor({ initialContent, onSave, onEditorReady, wordGoal }: TiptapEditorProps) {
+const [liveWordCount, setLiveWordCount] = useState(0);
+
+useWritingSession(liveWordCount);
+
+
+
+export function TiptapEditor({
+  initialContent,
+  onSave,
+  onEditorReady,
+  wordGoal,
+  typewriterMode = false,
+}: TiptapEditorProps) {
   const settings = useThemeStore((s) => s.writerSettings);
 
   const debouncedSave = useDebounce(
@@ -56,15 +73,48 @@ export function TiptapEditor({ initialContent, onSave, onEditorReady, wordGoal }
     editorProps: {
       attributes: {
         class: "min-h-[400px] rounded-xl bg-card p-6 shadow-sm focus:outline-none",
-        style: `font-size: ${settings.fontSize}px; line-height: ${settings.lineHeight}`,
+        style: `font-size: ${settings.fontSize}px; line-height: ${settings.lineHeight}; ${typewriterMode ? "padding-top: 50vh;" : ""
+        }`,
       },
     },
     onUpdate: ({ editor }) => {
       const json = editor.getJSON() as Record<string, unknown>;
       const words = editor.storage.characterCount?.words() ?? 0;
+      setLiveWordCount(words);
       debouncedSave(json, words);
     },
   });
+
+  
+useEffect(() => {
+  if (!editor || !typewriterMode) return;
+
+  function scrollToCursor() {
+    const editorDom = editor?.view.dom;
+    if (!editorDom) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (!rect) return;
+
+    const targetY = window.innerHeight / 2;
+    const currentY = rect.top;
+    const diff = currentY - targetY;
+
+    window.scrollBy({ top: diff, behavior: "smooth" });
+  }
+
+  editor.on("selectionUpdate", scrollToCursor);
+  editor.on("update", scrollToCursor);
+
+  return () => {
+    editor.off("selectionUpdate", scrollToCursor);
+    editor.off("update", scrollToCursor);
+  };
+}, [editor, typewriterMode]);
 
   useEffect(() => {
     if (editor && onEditorReady) {

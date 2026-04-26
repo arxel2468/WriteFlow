@@ -9,12 +9,13 @@ datasource db {
 }
 
 model Profile {
-  id          String   @id @db.Uuid
-  displayName String?  @map("display_name") @db.VarChar(100)
-  theme       String   @default("light") @db.VarChar(10)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
-  projects    Project[]
+  id              String           @id @db.Uuid
+  displayName     String?          @map("display_name") @db.VarChar(100)
+  theme           String           @default("light") @db.VarChar(10)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  projects        Project[]
+  writingSessions WritingSession[]
   @@map("profiles")
 }
 
@@ -88,4 +89,19 @@ model Snapshot {
   draft     Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
   @@index([draftId])
   @@map("snapshots")
+}
+
+model WritingSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  date      DateTime @map("date") @db.Date
+  wordCount Int      @default(0) @map("word_count")
+  duration  Int      @default(0) // seconds
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@map("writing_sessions")
 }
