@@ -68,18 +68,20 @@ export function WriteView({ projectId }: { projectId: string }) {
 
   // Escape key exits focus mode
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && focusMode) setFocusMode(false);
-      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag !== "INPUT" && tag !== "TEXTAREA" && !e.target.closest?.(".ProseMirror")) {
-          setShowShortcuts((v) => !v);
-        }
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === "Escape" && focusMode) setFocusMode(false);
+    if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const tag = target.tagName;
+      if (tag !== "INPUT" && tag !== "TEXTAREA" && !target.closest?.(".ProseMirror")) {
+        setShowShortcuts((v) => !v);
       }
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [focusMode]);
+  }
+  window.addEventListener("keydown", handleKeyDown);
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [focusMode]);
 
   useEffect(() => {
   const stored = localStorage.getItem(`writeflow-goal-${projectId}`);
