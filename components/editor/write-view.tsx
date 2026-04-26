@@ -27,6 +27,7 @@ export function WriteView({ projectId }: { projectId: string }) {
   const [wordGoal, setWordGoal] = useState<number>(0);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [typewriterMode, setTypewriterMode] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"outline" | "ai">("outline");
 
   const fetchData = useCallback(async () => {
     try {
@@ -69,30 +70,30 @@ export function WriteView({ projectId }: { projectId: string }) {
 
   // Escape key exits focus mode
   useEffect(() => {
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === "Escape" && focusMode) setFocusMode(false);
-    if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const tag = target.tagName;
-      if (tag !== "INPUT" && tag !== "TEXTAREA" && !target.closest?.(".ProseMirror")) {
-        setShowShortcuts((v) => !v);
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && focusMode) setFocusMode(false);
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        const tag = target.tagName;
+        if (tag !== "INPUT" && tag !== "TEXTAREA" && !target.closest?.(".ProseMirror")) {
+          setShowShortcuts((v) => !v);
+        }
       }
     }
-  }
-  window.addEventListener("keydown", handleKeyDown);
-  return () => window.removeEventListener("keydown", handleKeyDown);
-}, [focusMode]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [focusMode]);
 
   useEffect(() => {
-  const stored = localStorage.getItem(`writeflow-goal-${projectId}`);
-  if (stored) setWordGoal(Number(stored));
-}, [projectId]);
+    const stored = localStorage.getItem(`writeflow-goal-${projectId}`);
+    if (stored) setWordGoal(Number(stored));
+  }, [projectId]);
 
-function handleGoalChange(val: number) {
-  setWordGoal(val);
-  localStorage.setItem(`writeflow-goal-${projectId}`, String(val));
-}
+  function handleGoalChange(val: number) {
+    setWordGoal(val);
+    localStorage.setItem(`writeflow-goal-${projectId}`, String(val));
+  }
 
   const handleSave = useCallback(
     async (content: Record<string, unknown>, wordCount: number) => {
@@ -253,23 +254,64 @@ function handleGoalChange(val: number) {
       {!focusMode && <PhaseGuide phase="write" itemCount={0} projectId={projectId} />}
 
       <div className={focusMode ? "mx-auto max-w-3xl px-6 pb-16" : "flex gap-6"}>
+        {/* Tabbed sidebar */}
         {!focusMode && (
-          <div className="w-72 shrink-0 space-y-6 self-start sticky top-20">
-            {clusters.length > 0 && (
-              <ClusterReferencePanel
-                clusters={clusters}
-                onInsertAtom={handleInsertAtom}
-              />
-            )}
-            <AiAnalysisPanel
-              getText={() => editorRef.current?.getText() || ""}
-              getSelectedText={() => {
-                const editor = editorRef.current;
-                if (!editor) return "";
-                const { from, to } = editor.state.selection;
-                return editor.state.doc.textBetween(from, to, " ");
-              }}
-            />
+          <div className="w-72 shrink-0 self-start sticky top-20 flex flex-col" style={{ maxHeight: "calc(100vh - 6rem)" }}>
+            {/* Tab switcher */}
+            <div className="flex rounded-lg bg-muted p-1 mb-3 shrink-0">
+              <button
+                onClick={() => setSidebarTab("outline")}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  sidebarTab === "outline"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Outline
+              </button>
+              <button
+                onClick={() => setSidebarTab("ai")}
+                className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  sidebarTab === "ai"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                ✨ AI Tools
+              </button>
+            </div>
+
+            {/* Tab content — scrollable */}
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1">
+              {sidebarTab === "outline" ? (
+                clusters.length > 0 ? (
+                  <ClusterReferencePanel
+                    clusters={clusters}
+                    onInsertAtom={handleInsertAtom}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      No clusters yet.{" "}
+                      <Link href={`/project/${projectId}/structure`} className="text-accent underline">
+                        Build your structure
+                      </Link>{" "}
+                      first.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <AiAnalysisPanel
+                  getText={() => editorRef.current?.getText() || ""}
+                  getSelectedText={() => {
+                    const editor = editorRef.current;
+                    if (!editor) return "";
+                    const { from, to } = editor.state.selection;
+                    return editor.state.doc.textBetween(from, to, " ");
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
 
