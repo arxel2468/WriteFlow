@@ -1,4 +1,4 @@
-type TiptapNode = {
+export type TiptapNode = {
   type: string;
   content?: TiptapNode[];
   text?: string;
@@ -10,6 +10,8 @@ export function tiptapToMarkdown(doc: TiptapNode): string {
   if (!doc.content) return "";
   return doc.content.map((node) => nodeToMd(node)).join("\n");
 }
+
+
 
 function nodeToMd(node: TiptapNode): string {
   switch (node.type) {

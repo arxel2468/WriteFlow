@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { tiptapToMarkdown } from "@/lib/export/to-markdown";
+import { tiptapToMarkdown, type TiptapNode } from "@/lib/export/to-markdown";
 
 export async function GET(
   _request: NextRequest,
@@ -32,7 +32,8 @@ export async function GET(
       return NextResponse.json({ error: "No draft content to export" }, { status: 400 });
     }
 
-    const markdown = tiptapToMarkdown(draft.content as Record<string, unknown> & { type: string; content?: unknown[] });
+    const markdown = tiptapToMarkdown(draft.content as TiptapNode);
+    
     const filename = `${project.title.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.md`;
 
     return new NextResponse(markdown, {
